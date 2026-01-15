@@ -128,11 +128,12 @@
   cd /Users/zhangbowen/Projects/AlphaSche/alpha-PPO-code/BeamAndRandom/randomRolloutV0.010
 
   uv run python testPolicy.py \
+      --beam-size 10 \
+      --test-num 100 \
+      --mode "mcts_random" \
       --part-num 65 \
       --mach-num 30 \
-      --dist-type h \
-      --beam-size 10 \
-      --test-num 100
+      --dist-type h
 
   Key characteristics (from randomRolloutV0.010/mcts_policy.py):
   - No network loaded (update_net_model = None)
