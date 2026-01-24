@@ -5,7 +5,8 @@ from a2c_ppo_acktr.game.EnvirConf import config
 
 def argsECInit(isTrain = True):
     args = get_args_new(isTrain)
-    config.updateParam(partNum = args.part_num, distType = args.dist_type)
+    machNum = args.mach_num if args.mach_num != -1 else None
+    config.updateParam(partNum = args.part_num, machNum = machNum, distType = args.dist_type)
     EC = config.envConfig
     args.env_name = args.env_name + '-N' + str(args.resblock_num) + '-'\
     + str(EC.partNum) + '-' + str(EC.machNum) + '-' + EC.distType
