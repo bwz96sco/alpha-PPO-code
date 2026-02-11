@@ -1,0 +1,35 @@
+[project]
+name = "alpha-schedule-sb3"
+version = "0.1.0"
+description = "Parallel machine scheduling (TWT) research codebase rewritten on SB3"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "gymnasium>=0.29",
+  "matplotlib>=3.8",
+  "numpy>=2.0",
+  "openpyxl>=3.1",
+  "pandas>=2.2",
+  "stable-baselines3>=2.3",
+  "sb3-contrib>=2.3",
+  "tensorboard>=2.16",
+  "torch>=2.2",
+]
+
+[project.scripts]
+alphasched-train-ppo = "alphasched.cli.train_ppo:main"
+alphasched-eval-ppo = "alphasched.cli.eval_ppo:main"
+alphasched-run-gpsearch = "alphasched.cli.gpsearch:main"
+alphasched-run-baseline = "alphasched.cli.baselines:main"
+alphasched-export-excel = "alphasched.cli.export_excel:main"
+alphasched-compare-legacy = "alphasched.cli.compare_legacy:main"
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/alphasched"]
