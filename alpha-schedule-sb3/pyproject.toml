@@ -33,3 +33,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/alphasched"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (stochastic algorithms, many instances)",
+]
