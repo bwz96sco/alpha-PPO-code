@@ -1,39 +1,26 @@
 # Frontend Development Guidelines
 
-> Best practices for frontend development in this project.
+> **Status: Not Applicable**
 
 ---
 
 ## Overview
 
-This directory contains guidelines for frontend development. Fill in each file with your project's specific conventions.
+This project is a **pure Python RL research codebase** with no frontend component. There is no web UI, no JavaScript/TypeScript, and no browser-based interface.
+
+All interaction happens through **CLI commands** defined in `pyproject.toml`:
+
+| Command | Purpose |
+|---------|---------|
+| `alphasched-train-ppo` | Train MaskablePPO agent |
+| `alphasched-eval-ppo` | Evaluate trained PPO on test set |
+| `alphasched-run-gpsearch` | Run GPSearch / beam / rollout search |
+| `alphasched-run-baseline` | Run GA / BBO / PSO / dispatching rules |
+| `alphasched-export-excel` | Convert CSV metrics to Excel |
+| `alphasched-compare-legacy` | Verify new implementation matches legacy |
+
+Visualization is done via **TensorBoard** (training curves) and **matplotlib** (plots generated in scripts).
 
 ---
 
-## Guidelines Index
-
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | To fill |
-| [Hook Guidelines](./hook-guidelines.md) | Custom hooks, data fetching patterns | To fill |
-| [State Management](./state-management.md) | Local state, global state, server state | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
-
----
-
-## How to Fill These Guidelines
-
-For each guideline file:
-
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
-
-The goal is to help AI assistants and new team members understand how YOUR project works.
-
----
-
-**Language**: All documentation should be written in **English**.
+If a frontend is added in the future (e.g., a dashboard for experiment results), fill in the guideline files in this directory.

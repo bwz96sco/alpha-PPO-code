@@ -35,13 +35,15 @@ def extract_min_average(folder_path):
                     continue
                 sheet = workbook.sheet_by_name('test')
 
-                # Find 'min' column index
+                # Find 'min' or 'finishnum' column index
                 header_row = [str(sheet.cell_value(0, col)).lower() for col in range(sheet.ncols)]
-                if 'min' not in header_row:
-                    print(f"{filename:<60} {'No min column':>12}")
+                if 'min' in header_row:
+                    min_col_idx = header_row.index('min')
+                elif 'finishnum' in header_row:
+                    min_col_idx = header_row.index('finishnum')
+                else:
+                    print(f"{filename:<60} {'No min/finishNum':>12}")
                     continue
-
-                min_col_idx = header_row.index('min')
 
                 # Extract values (skip header)
                 min_values = []
@@ -53,10 +55,13 @@ def extract_min_average(folder_path):
                 # Use pandas for .xlsx files
                 df = pd.read_excel(filepath, sheet_name='test')
                 df.columns = df.columns.str.lower()
-                if 'min' not in df.columns:
-                    print(f"{filename:<60} {'No min column':>12}")
+                if 'min' in df.columns:
+                    min_values = df['min'].dropna().tolist()
+                elif 'finishnum' in df.columns:
+                    min_values = df['finishnum'].dropna().tolist()
+                else:
+                    print(f"{filename:<60} {'No min/finishNum':>12}")
                     continue
-                min_values = df['min'].dropna().tolist()
 
             if min_values:
                 avg = sum(min_values) / len(min_values)
