@@ -76,7 +76,7 @@ def solve_bbo(
             pos_list = np.where(mut_rand[i] < mutate_rate)[0]
             if pos_list.size == 1:
                 pos = int(pos_list[0])
-                new_pos = int(rng.integers(0, n))
+                new_pos = int(rng.randint(0, n) if hasattr(rng, 'randint') else rng.integers(0, n))
                 temp[i, [pos, new_pos]] = temp[i, [new_pos, pos]]
             elif pos_list.size > 1:
                 vals = temp[i, pos_list].copy()
