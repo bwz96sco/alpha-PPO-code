@@ -23,6 +23,10 @@ GA uses a "best of 5 combinations" approach per the paper (line 580):
     (individuals, iterations) chosen from
     {(100,800), (200,400), (285,285), (400,200), (800,100)}
     and the best result is kept per instance.
+
+MAPSO carries over EA sub-swarm speeds between instances (legacy behavior):
+the legacy code reuses Agent objects across instances, and only BA.initPopulation()
+resets BA's speed.  EA1/EA2 speed arrays persist from one instance to the next.
 """
 from __future__ import annotations
 
@@ -199,12 +203,14 @@ class TestMAPSO:
     """MAPSO: 400 particles, 2 sub-swarms, 200 iterations per phase,
     c1=2.0, c2=2.1, w=0.9->0.4 (paper).
 
-    Multi-Agent PSO with 3-phase BA/SA/EA pipeline and NatureSelection.
+    Multi-Agent PSO with 3-phase BA/EA1/EA2 pipeline.
+    EA sub-swarm speeds carry over between instances (legacy behavior).
     """
 
     @pytest.mark.slow
     def test_mapso_matches_paper(self, resolved_cfg, instances):
         wt_list: list[float] = []
+        ea_speeds = None  # First instance starts with zero speed
         for inst in instances:
             rng = _legacy_rng_after_instance(resolved_cfg, inst.seed)
             result = solve_mapso(
@@ -218,8 +224,11 @@ class TestMAPSO:
                 w_start=0.9,
                 w_end=0.4,
                 rng=rng,
+                ea_speeds=ea_speeds,
             )
             wt_list.append(result.best_wt)
+            # Carry over EA speeds to next instance (legacy behavior)
+            ea_speeds = result.extra["ea_speeds"]
         mean_wt = float(np.mean(wt_list))
         print(f"\nMAPSO mean WT: {mean_wt:.2f} (paper: {PAPER_MAPSO})")
         assert mean_wt == pytest.approx(PAPER_MAPSO, abs=0.01), (
