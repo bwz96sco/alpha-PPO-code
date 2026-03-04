@@ -88,7 +88,7 @@ class ExcelLog:
             timeStr = self.timeStr
         else:
             timeStr = self.name + '_' + self.timeStr
-        self.excelPath = './models/' + timeStr + 'V'+ str(self.epoch) +'.xls' 
+        self.excelPath = './logs/' + timeStr + 'V'+ str(self.epoch) +'.xls' 
         self.sheetName = ['train','test','loss','info']
         self.title = [[["episode", "reward"],],\
                       [["episode", "min","average","max"],],\

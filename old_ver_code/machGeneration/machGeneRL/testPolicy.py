@@ -18,7 +18,7 @@ if __name__ == '__main__':
     
     start = time.time()
     policy_mode =  'pure_policy' if 'pure' in args.mode else 'mcts_policy'
-    base_model_name = str(ec.partNum)+ '-15' + '-' + ec.distType
+    base_model_name = str(ec.partNum)+ '-16' + '-' + ec.distType
     name = args.env_name + '-M' + str(args.mach_num) + '-' + base_model_name
     log_name = policy_mode + '-' + name 
     

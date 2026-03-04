@@ -55,7 +55,8 @@ def parse_filename(filename: str) -> tuple[str, str, str] | None:
 
 
 def main() -> None:
-    base_folder = "/Users/zhangbowen/Library/CloudStorage/OneDrive-Personal/Papers/AlphaSchedule/ResultExcel"
+    #base_folder = "/Users/zhangbowen/Library/CloudStorage/OneDrive-Personal/Papers/AlphaSchedule/ResultExcel"
+    base_folder = "/Users/zhangbowen/Library/CloudStorage/OneDrive-Personal/Papers/AlphaSchedule/Ablation"
 
     # Collect all data: {dist: {algo: {combo: [avg_values]}}}
     data: dict[str, dict[str, dict[str, list[float]]]] = defaultdict(
