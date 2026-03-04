@@ -40,6 +40,11 @@ def get_args():
         default=65,
         help='model part number(65/95/125)')
     parser.add_argument(
+        '--model-mach',
+        type=int,
+        default=-1,
+        help='model mach number, -1 means auto from model-part')
+    parser.add_argument(
         '--mach-num',
         type=int,
         default=-1,

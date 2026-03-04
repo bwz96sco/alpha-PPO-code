@@ -9,10 +9,11 @@ from venvs.EnvirConf import config
 
 if __name__ == '__main__':
     args = get_args()
-    config.updateParam(modelAttr = args.model_part,\
+    config.updateParam(model_part = args.model_part,\
                        partNum = args.part_num, \
                        machNum = args.mach_num, \
-                       distType = args.dist_type)
+                       distType = args.dist_type, \
+                       model_mach = args.model_mach)
     
     ec = config.envConfig
     ob = config.obConfig

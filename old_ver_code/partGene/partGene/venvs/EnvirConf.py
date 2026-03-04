@@ -18,16 +18,16 @@ class ObsConfig:
         self.feaNum = self.stockFea + self.machFea
         self.stackFrameNum = 1
     
-    def updateWH(self, model_attr):
-        w = model_attr// 5
+    def updateWH(self, model_part, model_mach=-1):
+        w = model_part// 5
         self.width = max(w,5)
         self.height = min(w,5)
-        
-        self.output_space = model_attr
+
+        self.output_space = model_part
         group = (self.output_space - 5) // 10
-        
+
         self.part_model = self.output_space
-        self.mach_model = group * 5
+        self.mach_model = model_mach if model_mach > 0 else group * 5
         self.dist_model = 'h'
 #        self.width = 1
 #        self.height = envConfig.partNum
@@ -89,9 +89,9 @@ class Config:
         self.envConfig = EnviroConfig()
         self.obConfig = ObsConfig(self.envConfig)
         
-    def updateParam(self, modelAttr, partNum, machNum = -1, distType = None):
+    def updateParam(self, model_part, partNum, machNum = -1, distType = None, model_mach = -1):
         self.envConfig.setParam(partNum, machNum = machNum, distType = distType)
-        self.obConfig.updateWH(modelAttr)
+        self.obConfig.updateWH(model_part, model_mach=model_mach)
         
         self.envConfig.printParam()
         self.obConfig.printParam()

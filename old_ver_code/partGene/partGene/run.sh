@@ -2,22 +2,30 @@ test_num=100
 
 env_name="part-RL"
 dist_type='h'
-#policy="pure_policy" 
 
 for policy in "pure_policy" "k2"
 do
-  for model in 65 95 125 ;
+  # model 50-8
+  for part in 20 30 40;
   do
-    for part in 15 25 35 45 65 95 125;
-    do
-      if [ $model -ge $part ]; then
-        python testPolicy.py --model-part $model --mode $policy --env-name $env_name --test-num $test_num --part-num $part --dist-type $dist_type
-      else
-        echo "break"
-        break
-      fi
-    done
+    python testPolicy.py --model-part 50 --model-mach 8 --mode $policy --env-name $env_name --test-num $test_num --part-num $part --mach-num 8 --dist-type $dist_type
+  done
+
+  # model 50-32
+  for part in 20 30 40;
+  do
+    python testPolicy.py --model-part 50 --model-mach 32 --mode $policy --env-name $env_name --test-num $test_num --part-num $part --mach-num 32 --dist-type $dist_type
+  done
+
+  # model 100-8
+  for part in 20 30 40 50 60 70 80 90;
+  do
+    python testPolicy.py --model-part 100 --model-mach 8 --mode $policy --env-name $env_name --test-num $test_num --part-num $part --mach-num 8 --dist-type $dist_type
+  done
+
+  # model 100-32
+  for part in 20 30 40 50 60 70 80 90;
+  do
+    python testPolicy.py --model-part 100 --model-mach 32 --mode $policy --env-name $env_name --test-num $test_num --part-num $part --mach-num 32 --dist-type $dist_type
   done
 done
-
-  
