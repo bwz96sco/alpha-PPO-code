@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import csv
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, TextIO
 
 DEFAULT_FIELDS: tuple[str, ...] = (
     "run_id",
@@ -31,6 +31,8 @@ DEFAULT_FIELDS: tuple[str, ...] = (
 class MetricsWriter:
     path: Path
     fieldnames: tuple[str, ...] = DEFAULT_FIELDS
+    _file: TextIO = field(init=False, repr=False)
+    _writer: csv.DictWriter = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -52,4 +54,3 @@ class MetricsWriter:
 
     def __exit__(self, exc_type, exc, tb) -> None:
         self.close()
-
