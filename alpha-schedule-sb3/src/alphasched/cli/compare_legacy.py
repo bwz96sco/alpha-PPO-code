@@ -37,7 +37,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # --- legacy import setup ---
     repo_root = _repo_root()
-    legacy_root = repo_root / "data-mcts" / "mctsAlphaV0.080"
+    legacy_root = repo_root / "old_ver_code" / "data-mcts" / "mctsAlphaV0.080"
     if not legacy_root.exists():
         raise FileNotFoundError(f"Legacy path not found: {legacy_root}")
     sys.path.insert(0, str(legacy_root))

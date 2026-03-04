@@ -19,7 +19,14 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--part-num", type=int, default=65)
     p.add_argument("--mach-num", type=int, default=-1, help="-1 means auto")
     p.add_argument("--dist-type", type=str, default="h", choices=["h", "m", "l"])
-    p.add_argument("--seed", type=int, default=0)
+    p.add_argument(
+        "--algo-seed",
+        "--seed",
+        dest="algo_seed",
+        type=int,
+        default=0,
+        help="SB3/PyTorch/NumPy seed (algorithm randomness). Alias: --seed",
+    )
     p.add_argument(
         "--train-seed",
         type=int,
@@ -53,7 +60,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     return p
 
 
-def _make_env_thunk(env_cfg: EnvConfig, obs_cfg: ObsConfig, *, rank: int, seed: int):
+def _make_env_thunk(env_cfg: EnvConfig, obs_cfg: ObsConfig, *, rank: int):
     def _thunk():
         from stable_baselines3.common.monitor import Monitor
         from sb3_contrib.common.wrappers import ActionMasker
@@ -109,7 +116,7 @@ def main(argv: list[str] | None = None) -> None:
                     "part_num": resolved.part_num,
                     "mach_num": resolved.mach_num,
                     "dist_type": resolved.dist_type,
-                    "seed": args.seed,
+                    "algo_seed": args.algo_seed,
                     "train_seed": resolved.train_seed,
                 },
                 "ppo": {
@@ -136,7 +143,7 @@ def main(argv: list[str] | None = None) -> None:
     from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
     from stable_baselines3.common.callbacks import CallbackList
 
-    env_fns = [_make_env_thunk(env_cfg, obs_cfg, rank=i, seed=args.seed) for i in range(int(args.num_envs))]
+    env_fns = [_make_env_thunk(env_cfg, obs_cfg, rank=i) for i in range(int(args.num_envs))]
     vec_env = DummyVecEnv(env_fns) if int(args.num_envs) == 1 else SubprocVecEnv(env_fns)
 
     if args.policy_net == "simconv":
@@ -170,7 +177,7 @@ def main(argv: list[str] | None = None) -> None:
         tensorboard_log=str(run.tb_dir),
         policy_kwargs=policy_kwargs,
         verbose=1,
-        seed=int(args.seed),
+        seed=int(args.algo_seed),
         device=str(args.device),
     )
 
