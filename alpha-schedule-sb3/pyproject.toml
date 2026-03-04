@@ -25,7 +25,10 @@ alphasched-export-excel = "alphasched.cli.export_excel:main"
 alphasched-compare-legacy = "alphasched.cli.compare_legacy:main"
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = [
+    "pytest>=8.0",
+    "xlrd>=2.0.2",
+]
 
 [build-system]
 requires = ["hatchling>=1.24"]

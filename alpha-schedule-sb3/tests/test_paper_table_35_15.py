@@ -29,7 +29,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from alphasched.baselines import solve_bbo, solve_ga, solve_pso, solve_rule
+from alphasched.baselines import solve_bbo, solve_ga, solve_mapso, solve_rule
 from alphasched.config.env import EnvConfig
 from alphasched.core.generator import InstanceGenerator
 
@@ -196,22 +196,22 @@ class TestGA:
 
 
 class TestMAPSO:
-    """PSO: 400 particles, 200 iterations, c1=2.0, c2=2.1, w=0.9->0.4 (paper).
+    """MAPSO: 400 particles, 2 sub-swarms, 200 iterations per phase,
+    c1=2.0, c2=2.1, w=0.9->0.4 (paper).
 
-    Note: the paper uses a Multi-Agent PSO (MAPSO) with sub-swarms
-    (BA/SA/EA architecture).  The current solve_pso is a single-swarm PSO,
-    so results may differ from the paper's MAPSO values.
+    Multi-Agent PSO with 3-phase BA/SA/EA pipeline and NatureSelection.
     """
 
     @pytest.mark.slow
-    def test_pso_matches_paper(self, resolved_cfg, instances):
+    def test_mapso_matches_paper(self, resolved_cfg, instances):
         wt_list: list[float] = []
         for inst in instances:
             rng = _legacy_rng_after_instance(resolved_cfg, inst.seed)
-            result = solve_pso(
+            result = solve_mapso(
                 inst,
                 resolved_cfg,
                 pop_size=400,
+                sub_pop_num=2,
                 iters=200,
                 c1=2.0,
                 c2=2.1,
@@ -221,8 +221,7 @@ class TestMAPSO:
             )
             wt_list.append(result.best_wt)
         mean_wt = float(np.mean(wt_list))
-        print(f"\nPSO mean WT: {mean_wt:.2f} (paper MAPSO: {PAPER_MAPSO})")
-        # PSO (single-swarm) vs MAPSO (multi-agent) — allow wider tolerance
-        assert mean_wt == pytest.approx(PAPER_MAPSO, rel=0.10), (
-            f"PSO mean WT {mean_wt:.2f} deviates >10% from paper MAPSO {PAPER_MAPSO}"
+        print(f"\nMAPSO mean WT: {mean_wt:.2f} (paper: {PAPER_MAPSO})")
+        assert mean_wt == pytest.approx(PAPER_MAPSO, abs=0.01), (
+            f"MAPSO mean WT {mean_wt:.2f} != paper {PAPER_MAPSO}"
         )
