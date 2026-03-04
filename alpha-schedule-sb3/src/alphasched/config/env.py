@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
+
+import numpy as np
 
 DistType = Literal["h", "m", "l"]
 Mode = Literal["train", "val", "test"]
@@ -52,7 +54,7 @@ class EnvConfig:
     min_time: int = 5
 
     # Seeds (legacy uses test=0, val=1000; train was random)
-    train_seed: int = 12345
+    train_seed: int = field(default_factory=lambda: int(np.random.randint(2000, 999_999_999)))
     val_seed: int = 1000
     test_seed: int = 0
 
@@ -117,4 +119,3 @@ class ObsConfig:
     def channel_dim(self) -> int:
         # +1 machine feature
         return self.job_feature_dim + 1
-

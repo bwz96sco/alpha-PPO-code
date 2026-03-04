@@ -20,6 +20,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--mach-num", type=int, default=-1, help="-1 means auto")
     p.add_argument("--dist-type", type=str, default="h", choices=["h", "m", "l"])
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument(
+        "--train-seed",
+        type=int,
+        default=None,
+        help="Training instance seed (legacy default: random). If omitted, uses a random seed.",
+    )
 
     p.add_argument("--num-envs", type=int, default=8)
     p.add_argument("--total-timesteps", type=int, default=200_000)
@@ -71,14 +77,23 @@ def _make_env_thunk(env_cfg: EnvConfig, obs_cfg: ObsConfig, *, rank: int, seed: 
 def main(argv: list[str] | None = None) -> None:
     args = _build_arg_parser().parse_args(argv)
 
-    env_cfg = EnvConfig(
-        part_num=args.part_num,
-        dist_type=args.dist_type,
-        mach_num=None if args.mach_num <= 0 else args.mach_num,
-        train_seed=int(args.seed),
-        val_seed=1000,
-        test_seed=0,
-    )
+    if args.train_seed is None:
+        env_cfg = EnvConfig(
+            part_num=args.part_num,
+            dist_type=args.dist_type,
+            mach_num=None if args.mach_num <= 0 else args.mach_num,
+            val_seed=1000,
+            test_seed=0,
+        )
+    else:
+        env_cfg = EnvConfig(
+            part_num=args.part_num,
+            dist_type=args.dist_type,
+            mach_num=None if args.mach_num <= 0 else args.mach_num,
+            train_seed=int(args.train_seed),
+            val_seed=1000,
+            test_seed=0,
+        )
     obs_cfg = ObsConfig(include_rule_features=True)
     resolved = env_cfg.resolved()
 
@@ -95,6 +110,7 @@ def main(argv: list[str] | None = None) -> None:
                     "mach_num": resolved.mach_num,
                     "dist_type": resolved.dist_type,
                     "seed": args.seed,
+                    "train_seed": resolved.train_seed,
                 },
                 "ppo": {
                     "learning_rate": args.learning_rate,
@@ -181,4 +197,3 @@ def main(argv: list[str] | None = None) -> None:
 
 if __name__ == "__main__":  # pragma: no cover
     main()
-
