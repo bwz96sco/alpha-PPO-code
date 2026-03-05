@@ -10,7 +10,7 @@ import numpy as np
 from alphasched.config.env import EnvConfig, ObsConfig
 from alphasched.envs.parallel_machine_twt import EnvParams, ParallelMachineTWTEnv
 from alphasched.logging import MetricsWriter, create_run_dir
-from alphasched.rl.callbacks import EpisodeCsvCallback, EpisodeCsvConfig, WallTimeLimitCallback
+from alphasched.rl.callbacks import EpisodeCsvCallback, EpisodeCsvConfig, TrainingLogCallback, WallTimeLimitCallback
 from alphasched.rl.models import ResNetExtractor, SimConvExtractor
 
 
@@ -186,7 +186,8 @@ def main(argv: list[str] | None = None) -> None:
             EpisodeCsvCallback(
                 writer,
                 EpisodeCsvConfig(run_id=run.run_id, algo="ppo", mode="train", policy_name=policy_name, env_cfg=resolved),
-            )
+            ),
+            TrainingLogCallback(log_interval=1),
         ]
         if args.run_hours and float(args.run_hours) > 0:
             cb_list.append(WallTimeLimitCallback(max_seconds=float(args.run_hours) * 3600.0))

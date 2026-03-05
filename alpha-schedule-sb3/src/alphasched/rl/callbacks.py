@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import time
+from collections import deque
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 
 from alphasched.config.env import ResolvedEnvConfig, Mode
@@ -68,4 +70,61 @@ class WallTimeLimitCallback(BaseCallback):
         if (time.time() - self._t0) >= self._max_seconds:
             return False
         return True
+
+
+class TrainingLogCallback(BaseCallback):
+    """Print per-update training stats matching legacy output format.
+
+    Output format (every ``log_interval`` updates):
+        Time MM-DD HHh MMm SSs: Updates N, num timesteps T, Last K training episodes:
+        entropy/value/policy/loss E/V/P/L, min/mean/max reward min/mean/max
+    """
+
+    def __init__(self, *, log_interval: int = 1, deque_size: int = 100):
+        super().__init__()
+        self._log_interval = int(log_interval)
+        self._deque_size = int(deque_size)
+        self._episode_rewards: deque[float] = deque(maxlen=self._deque_size)
+        self._t0 = 0.0
+        self._updates = 0
+
+    def _on_training_start(self) -> None:
+        self._t0 = time.time()
+
+    def _on_step(self) -> bool:
+        infos: list[dict[str, Any]] = self.locals.get("infos", [])
+        dones = self.locals.get("dones", [])
+        for info, done in zip(infos, dones):
+            if not done:
+                continue
+            ep_info = info.get("episode")
+            if ep_info is not None:
+                self._episode_rewards.append(ep_info["r"])
+        return True
+
+    def _on_rollout_end(self) -> None:
+        self._updates += 1
+        if self._updates % self._log_interval != 0:
+            return
+        if len(self._episode_rewards) < 2:
+            return
+
+        running_time = time.time() - self._t0
+        n_envs = self.training_env.num_envs
+        total_timesteps = self.num_timesteps
+
+        # Get losses from SB3 logger
+        entropy = self.model.logger.name_to_value.get("train/entropy_loss", 0.0)
+        value_loss = self.model.logger.name_to_value.get("train/value_loss", 0.0)
+        policy_loss = self.model.logger.name_to_value.get("train/policy_gradient_loss", 0.0)
+        loss = self.model.logger.name_to_value.get("train/loss", 0.0)
+
+        rewards = np.array(self._episode_rewards)
+        print(
+            f"Time {time.strftime('%m-%d %Hh %Mm %Ss', time.gmtime(running_time))}: "
+            f"Updates {self._updates}, num timesteps {total_timesteps}, "
+            f"Last {len(self._episode_rewards)} training episodes:\n"
+            f"entropy/value/policy/loss {entropy:.3f}/{value_loss:.3f}/{policy_loss:.3f}/{loss:.4f}, "
+            f"min/mean/max reward {rewards.min():.3f}/{rewards.mean():.3f}/{rewards.max():.3f}\n"
+        )
 

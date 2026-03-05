@@ -114,6 +114,7 @@ def main(argv: list[str] | None = None) -> None:
                 raise ValueError(f"unknown algo: {args.algo}")
 
             wt_list.append(float(result.best_wt))
+            print(f"{instance_id + 1}  bestGrade = {result.best_wt}")
             writer.write(
                 {
                     "run_id": run.run_id,
@@ -135,8 +136,10 @@ def main(argv: list[str] | None = None) -> None:
                 }
             )
 
+    elapsed = time.time() - t0
     mean_wt = float(np.mean(wt_list)) if wt_list else float("nan")
-    print(f"{args.algo}: evaluated {len(wt_list)} instances. mean WT = {mean_wt:.5f}")
+    print(f"num_playouts:, min: {min(wt_list)}, average: {mean_wt}, max:{max(wt_list)}")
+    print(f"Execution Time:  {elapsed:.2f}")
     print(f"Metrics written to: {run.metrics_path}")
 
 
