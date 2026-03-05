@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from collections import deque
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -72,6 +73,36 @@ class WallTimeLimitCallback(BaseCallback):
         return True
 
 
+@dataclass(frozen=True, slots=True)
+class PeriodicModelSaveConfig:
+    out_dir: Path
+    file_prefix: str
+    every_steps: int
+
+
+class PeriodicModelSaveCallback(BaseCallback):
+    """Save model checkpoints periodically during training."""
+
+    def __init__(self, cfg: PeriodicModelSaveConfig):
+        super().__init__()
+        self._cfg = cfg
+        self._cfg.out_dir.mkdir(parents=True, exist_ok=True)
+        self._last_save_steps = 0
+
+    def _save(self, *, suffix: str) -> None:
+        assert self.model is not None
+        path = self._cfg.out_dir / f"{self._cfg.file_prefix}-{suffix}.model"
+        self.model.save(str(path))
+
+    def _on_step(self) -> bool:
+        if self._cfg.every_steps <= 0:
+            return True
+        if (self.num_timesteps - self._last_save_steps) >= int(self._cfg.every_steps):
+            self._last_save_steps = int(self.num_timesteps)
+            self._save(suffix=f"t{self.num_timesteps}")
+        return True
+
+
 class TrainingLogCallback(BaseCallback):
     """Print per-update training stats matching legacy output format.
 
@@ -110,7 +141,6 @@ class TrainingLogCallback(BaseCallback):
             return
 
         running_time = time.time() - self._t0
-        n_envs = self.training_env.num_envs
         total_timesteps = self.num_timesteps
 
         # Get losses from SB3 logger
@@ -127,4 +157,3 @@ class TrainingLogCallback(BaseCallback):
             f"entropy/value/policy/loss {entropy:.3f}/{value_loss:.3f}/{policy_loss:.3f}/{loss:.4f}, "
             f"min/mean/max reward {rewards.min():.3f}/{rewards.mean():.3f}/{rewards.max():.3f}\n"
         )
-

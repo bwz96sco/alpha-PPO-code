@@ -10,7 +10,14 @@ import numpy as np
 from alphasched.config.env import EnvConfig, ObsConfig
 from alphasched.envs.parallel_machine_twt import EnvParams, ParallelMachineTWTEnv
 from alphasched.logging import MetricsWriter, create_run_dir
-from alphasched.rl.callbacks import EpisodeCsvCallback, EpisodeCsvConfig, TrainingLogCallback, WallTimeLimitCallback
+from alphasched.rl.callbacks import (
+    EpisodeCsvCallback,
+    EpisodeCsvConfig,
+    PeriodicModelSaveCallback,
+    PeriodicModelSaveConfig,
+    TrainingLogCallback,
+    WallTimeLimitCallback,
+)
 from alphasched.rl.models import ResNetExtractor, SimConvExtractor
 
 
@@ -33,9 +40,18 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Training instance seed (legacy default: random). If omitted, uses a random seed.",
     )
+    p.add_argument("--models-dir", type=str, default="models")
+    p.add_argument("--save-every", type=int, default=0, help="If >0, saves a checkpoint every N timesteps.")
+    p.add_argument("--load-path", type=str, default=None, help="Resume training from a saved SB3 model file.")
+    p.add_argument(
+        "--load",
+        action="store_true",
+        default=False,
+        help="Resume from models/<part>-<mach>-<dist>-weight.model in --models-dir.",
+    )
 
     p.add_argument("--num-envs", type=int, default=8)
-    p.add_argument("--total-timesteps", type=int, default=200_000)
+    p.add_argument("--total-timesteps", type=int, default=10**18)
     p.add_argument("--run-hours", type=float, default=0.0, help="If >0, stops by wall time as well.")
 
     # PPO hyperparams (paper Table 4 defaults)
@@ -103,6 +119,17 @@ def main(argv: list[str] | None = None) -> None:
         )
     obs_cfg = ObsConfig(include_rule_features=True)
     resolved = env_cfg.resolved()
+    model_dir = Path(args.models_dir)
+    file_prefix = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}-weight"
+    final_model_path = model_dir / f"{file_prefix}.model"
+    if args.load_path:
+        load_path = Path(args.load_path)
+    elif bool(args.load):
+        load_path = final_model_path
+    else:
+        load_path = None
+    if load_path is not None and not load_path.exists():
+        raise FileNotFoundError(load_path)
 
     run = create_run_dir(base_dir=args.runs_dir, name=args.run_name)
     run.run_dir.mkdir(parents=True, exist_ok=True)
@@ -118,6 +145,7 @@ def main(argv: list[str] | None = None) -> None:
                     "dist_type": resolved.dist_type,
                     "algo_seed": args.algo_seed,
                     "train_seed": resolved.train_seed,
+                    "load_path": str(load_path) if load_path is not None else None,
                 },
                 "ppo": {
                     "learning_rate": args.learning_rate,
@@ -161,25 +189,34 @@ def main(argv: list[str] | None = None) -> None:
         "net_arch": {"pi": [], "vf": []},
     }
 
-    model = MaskablePPO(
-        MaskableActorCriticPolicy,
-        vec_env,
-        learning_rate=float(args.learning_rate),
-        gamma=float(args.gamma),
-        clip_range=float(args.clip_range),
-        n_steps=int(args.n_steps),
-        batch_size=int(args.batch_size),
-        n_epochs=int(args.n_epochs),
-        gae_lambda=float(args.gae_lambda),
-        vf_coef=float(args.vf_coef),
-        ent_coef=float(args.ent_coef),
-        max_grad_norm=float(args.max_grad_norm),
-        tensorboard_log=str(run.tb_dir),
-        policy_kwargs=policy_kwargs,
-        verbose=1,
-        seed=int(args.algo_seed),
-        device=str(args.device),
-    )
+    if load_path is not None:
+        model = MaskablePPO.load(str(load_path), env=vec_env, device=str(args.device))
+        model.tensorboard_log = str(run.tb_dir)
+        model.verbose = 1
+        reset_num_timesteps = False
+    else:
+        model = MaskablePPO(
+            MaskableActorCriticPolicy,
+            vec_env,
+            learning_rate=float(args.learning_rate),
+            gamma=float(args.gamma),
+            clip_range=float(args.clip_range),
+            n_steps=int(args.n_steps),
+            batch_size=int(args.batch_size),
+            n_epochs=int(args.n_epochs),
+            gae_lambda=float(args.gae_lambda),
+            vf_coef=float(args.vf_coef),
+            ent_coef=float(args.ent_coef),
+            max_grad_norm=float(args.max_grad_norm),
+            tensorboard_log=str(run.tb_dir),
+            policy_kwargs=policy_kwargs,
+            verbose=1,
+            seed=int(args.algo_seed),
+            device=str(args.device),
+        )
+        reset_num_timesteps = True
+
+    model_dir.mkdir(parents=True, exist_ok=True)
 
     with MetricsWriter(run.metrics_path) as writer:
         cb_list = [
@@ -189,18 +226,38 @@ def main(argv: list[str] | None = None) -> None:
             ),
             TrainingLogCallback(log_interval=1),
         ]
+        if args.save_every and int(args.save_every) > 0:
+            cb_list.append(
+                PeriodicModelSaveCallback(
+                    PeriodicModelSaveConfig(out_dir=model_dir, file_prefix=file_prefix, every_steps=int(args.save_every))
+                )
+            )
         if args.run_hours and float(args.run_hours) > 0:
             cb_list.append(WallTimeLimitCallback(max_seconds=float(args.run_hours) * 3600.0))
         callbacks = CallbackList(cb_list)
 
         t0 = time.time()
-        model.learn(total_timesteps=int(args.total_timesteps), callback=callbacks, progress_bar=True)
+        interrupted = False
+        try:
+            model.learn(
+                total_timesteps=int(args.total_timesteps),
+                callback=callbacks,
+                progress_bar=True,
+                reset_num_timesteps=reset_num_timesteps,
+            )
+        except KeyboardInterrupt:
+            interrupted = True
+            print("Interrupted: saving model before exit...")
         t1 = time.time()
-        print(f"Training finished in {t1 - t0:.1f}s")
+        if not interrupted:
+            print(f"Training finished in {t1 - t0:.1f}s")
 
     model_path = run.run_dir / "model.zip"
     model.save(str(model_path))
-    print(f"Saved model to: {model_path}")
+    model.save(str(final_model_path))
+    vec_env.close()
+    print(f"Saved run model to: {model_path}")
+    print(f"Saved weight model to: {final_model_path}")
 
 
 if __name__ == "__main__":  # pragma: no cover
