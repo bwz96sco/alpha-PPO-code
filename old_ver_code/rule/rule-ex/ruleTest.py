@@ -9,7 +9,7 @@ from venvs.EnvirConf import config
 
 if __name__ == '__main__':
     args = get_args()
-    config.updateParam(partNum = args.part_num, distType = args.dist_type)
+    config.updateParam(partNum = args.part_num, machNum = args.mach_num, distType = args.dist_type)
     
     ec = config.envConfig
     n_games = args.test_num

@@ -1,6 +1,6 @@
 test_num=100
 
-env_name="mach-ex"
+env_name="mach-gen"
 part_num=50
 dist_type='h'
 
