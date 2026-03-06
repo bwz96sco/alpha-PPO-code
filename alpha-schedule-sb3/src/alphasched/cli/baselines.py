@@ -69,7 +69,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--runs-dir",
         type=str,
         default="runs",
-        help="Root run directory. Runs are created under <runs-dir>/<part>-<mach>-<dist>/baselines/",
+        help="Root run directory. Runs are created under <runs-dir>/baselines/<part>-<mach>-<dist>/",
     )
     p.add_argument("--run-name", type=str, default="baseline")
     return p
@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> None:
     shared_rng = np.random.default_rng(int(args.algo_seed)) if args.seed_mode == "independent" else None
 
     env_key = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}"
-    run = create_run_dir(base_dir=Path(args.runs_dir) / env_key / "baselines", name=args.run_name)
+    run = create_run_dir(base_dir=Path(args.runs_dir) / "baselines" / env_key, name=args.run_name)
     t0 = time.time()
     wt_list: list[float] = []
 

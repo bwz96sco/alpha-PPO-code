@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import time
 from collections import deque
 from dataclasses import dataclass
@@ -10,6 +11,7 @@ import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 
 from alphasched.config.env import ResolvedEnvConfig, Mode
+from alphasched.logging import update_latest_run
 from alphasched.logging.metrics import MetricsWriter
 
 
@@ -75,9 +77,24 @@ class WallTimeLimitCallback(BaseCallback):
 
 @dataclass(frozen=True, slots=True)
 class PeriodicModelSaveConfig:
-    out_dir: Path
-    file_prefix: str
+    run_dir: Path
+    latest_base_dir: Path
     every_steps: int
+
+
+def save_run_model_snapshot(model: Any, *, run_dir: Path, latest_base_dir: Path, checkpoint_name: str | None = None) -> Path:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    current_model_path = run_dir / "model.zip"
+    model.save(str(current_model_path))
+    update_latest_run(base_dir=latest_base_dir, run_dir=run_dir)
+
+    if checkpoint_name is not None:
+        checkpoints_dir = run_dir / "checkpoints"
+        checkpoints_dir.mkdir(parents=True, exist_ok=True)
+        checkpoint_path = checkpoints_dir / checkpoint_name
+        shutil.copy2(current_model_path, checkpoint_path)
+
+    return current_model_path
 
 
 class PeriodicModelSaveCallback(BaseCallback):
@@ -86,13 +103,17 @@ class PeriodicModelSaveCallback(BaseCallback):
     def __init__(self, cfg: PeriodicModelSaveConfig):
         super().__init__()
         self._cfg = cfg
-        self._cfg.out_dir.mkdir(parents=True, exist_ok=True)
+        self._cfg.run_dir.mkdir(parents=True, exist_ok=True)
         self._last_save_steps = 0
 
     def _save(self, *, suffix: str) -> None:
         assert self.model is not None
-        path = self._cfg.out_dir / f"{self._cfg.file_prefix}-{suffix}.model"
-        self.model.save(str(path))
+        save_run_model_snapshot(
+            self.model,
+            run_dir=self._cfg.run_dir,
+            latest_base_dir=self._cfg.latest_base_dir,
+            checkpoint_name=f"model-{suffix}.zip",
+        )
 
     def _on_step(self) -> bool:
         if self._cfg.every_steps <= 0:

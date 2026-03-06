@@ -9,12 +9,13 @@ import numpy as np
 
 from alphasched.config.env import EnvConfig, ObsConfig
 from alphasched.envs.parallel_machine_twt import EnvParams, ParallelMachineTWTEnv
-from alphasched.logging import MetricsWriter, create_run_dir, update_latest_run
+from alphasched.logging import MetricsWriter, create_run_dir
 from alphasched.rl.callbacks import (
     EpisodeCsvCallback,
     EpisodeCsvConfig,
     PeriodicModelSaveCallback,
     PeriodicModelSaveConfig,
+    save_run_model_snapshot,
     TrainingLogCallback,
     WallTimeLimitCallback,
 )
@@ -57,14 +58,13 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Training instance seed (legacy default: random). If omitted, uses a random seed.",
     )
-    p.add_argument("--models-dir", type=str, default="models", help="Directory for periodic checkpoints (--save-every).")
-    p.add_argument("--save-every", type=int, default=0, help="If >0, saves a checkpoint every N timesteps.")
+    p.add_argument("--save-every", type=int, default=100000, help="If >0, refreshes run_dir/model.zip and writes checkpoints/model-t*.zip every N timesteps.")
     p.add_argument("--load-path", type=str, default=None, help="Resume training from a saved SB3 model file.")
     p.add_argument(
         "--load",
         action="store_true",
         default=False,
-        help="Resume from the latest successfully saved model at <runs-dir>/<part>-<mach>-<dist>/train-ppo/latest/model.zip.",
+        help="Resume from the latest successfully saved model at <runs-dir>/train-ppo/<part>-<mach>-<dist>/latest/model.zip.",
     )
 
     p.add_argument("--num-envs", type=int, default=8)
@@ -93,7 +93,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--runs-dir",
         type=str,
         default="runs",
-        help="Root run directory. Runs are created under <runs-dir>/<part>-<mach>-<dist>/train-ppo/",
+        help="Root run directory. Runs are created under <runs-dir>/train-ppo/<part>-<mach>-<dist>/",
     )
     return p
 
@@ -142,8 +142,7 @@ def main(argv: list[str] | None = None) -> None:
     obs_cfg = ObsConfig(include_rule_features=True)
     resolved = env_cfg.resolved()
     env_key = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}"
-    env_runs_dir = Path(args.runs_dir) / env_key / "train-ppo"
-    file_prefix = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}-weight"
+    env_runs_dir = Path(args.runs_dir) / "train-ppo" / env_key
     if args.load_path:
         load_path = Path(args.load_path)
     elif bool(args.load):
@@ -247,11 +246,9 @@ def main(argv: list[str] | None = None) -> None:
             TrainingLogCallback(log_interval=1),
         ]
         if args.save_every and int(args.save_every) > 0:
-            model_dir = Path(args.models_dir)
-            model_dir.mkdir(parents=True, exist_ok=True)
             cb_list.append(
                 PeriodicModelSaveCallback(
-                    PeriodicModelSaveConfig(out_dir=model_dir, file_prefix=file_prefix, every_steps=int(args.save_every))
+                    PeriodicModelSaveConfig(run_dir=run.run_dir, latest_base_dir=env_runs_dir, every_steps=int(args.save_every))
                 )
             )
         if args.run_hours and float(args.run_hours) > 0:
@@ -274,9 +271,7 @@ def main(argv: list[str] | None = None) -> None:
         if not interrupted:
             print(f"Training finished in {t1 - t0:.1f}s")
 
-    model_path = run.run_dir / "model.zip"
-    model.save(str(model_path))
-    update_latest_run(base_dir=env_runs_dir, run_dir=run.run_dir)
+    model_path = save_run_model_snapshot(model, run_dir=run.run_dir, latest_base_dir=env_runs_dir)
     vec_env.close()
     print(f"Saved run model to: {model_path}")
 

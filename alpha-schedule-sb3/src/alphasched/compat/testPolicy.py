@@ -17,7 +17,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--part-num", type=int, default=65)
     p.add_argument("--mach-num", type=int, default=-1)
     p.add_argument("--dist-type", type=str, default="h", choices=["h", "m", "l"])
-    p.add_argument("--model-path", type=str, default=None, help="Default: runs/<part>-<mach>-<dist>/train-ppo/latest/model.zip")
+    p.add_argument("--model-path", type=str, default=None, help="Default: runs/train-ppo/<part>-<mach>-<dist>/latest/model.zip")
     p.add_argument("--device", type=str, default="cpu")
     return p
 
@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> None:
     env_cfg = EnvConfig(part_num=args.part_num, dist_type=args.dist_type, mach_num=None if args.mach_num <= 0 else args.mach_num)
     resolved = env_cfg.resolved()
     env_key = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}"
-    default_model_path = Path("runs") / env_key / "train-ppo" / "latest" / "model.zip"
+    default_model_path = Path("runs") / "train-ppo" / env_key / "latest" / "model.zip"
 
     mode = args.mode.lower()
     if "random" in mode:

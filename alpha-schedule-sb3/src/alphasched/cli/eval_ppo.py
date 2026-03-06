@@ -24,7 +24,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--runs-dir",
         type=str,
         default="runs",
-        help="Root run directory. Runs are created under <runs-dir>/<part>-<mach>-<dist>/eval-ppo/",
+        help="Root run directory. Runs are created under <runs-dir>/eval-ppo/<part>-<mach>-<dist>/",
     )
     p.add_argument("--run-name", type=str, default="eval-ppo")
     return p
@@ -73,7 +73,7 @@ def main(argv: list[str] | None = None) -> None:
     resolved = env_cfg.resolved()
 
     env_key = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}"
-    run = create_run_dir(base_dir=Path(args.runs_dir) / env_key / "eval-ppo", name=args.run_name)
+    run = create_run_dir(base_dir=Path(args.runs_dir) / "eval-ppo" / env_key, name=args.run_name)
     from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
     from sb3_contrib import MaskablePPO
     from sb3_contrib.common.maskable.utils import get_action_masks

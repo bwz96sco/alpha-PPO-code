@@ -29,7 +29,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--runs-dir",
         type=str,
         default="runs",
-        help="Root run directory. Runs are created under <runs-dir>/<part>-<mach>-<dist>/search/",
+        help="Root run directory. Runs are created under <runs-dir>/search/<part>-<mach>-<dist>/",
     )
     p.add_argument("--run-name", type=str, default="search")
     return p
@@ -49,7 +49,7 @@ def main(argv: list[str] | None = None) -> None:
         policy = None
 
     env_key = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}"
-    run = create_run_dir(base_dir=Path(args.runs_dir) / env_key / "search", name=args.run_name)
+    run = create_run_dir(base_dir=Path(args.runs_dir) / "search" / env_key, name=args.run_name)
     t0 = time.time()
     wt_list: list[float] = []
 

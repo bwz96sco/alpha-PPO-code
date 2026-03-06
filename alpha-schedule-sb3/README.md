@@ -15,18 +15,21 @@ uv sync
 uv run alphasched-train-ppo --part-num 65 --dist-type h --num-envs 8 --total-timesteps 200000
 
 # Evaluate PPO on a deterministic test set
-uv run alphasched-eval-ppo --part-num 65 --dist-type h --test-num 100 --model-path runs/65-30-h/train-ppo/latest/model.zip
+uv run alphasched-eval-ppo --part-num 65 --dist-type h --test-num 100 --model-path runs/train-ppo/65-30-h/latest/model.zip
 
 # Run guided policy search (GPSearch) using the trained policy
-uv run alphasched-run-gpsearch --part-num 65 --dist-type h --test-num 100 --beam-size 10 --model-path runs/65-30-h/train-ppo/latest/model.zip
+uv run alphasched-run-gpsearch --part-num 65 --dist-type h --test-num 100 --beam-size 10 --model-path runs/train-ppo/65-30-h/latest/model.zip
 
 # Run baselines (rules/GA/BBO/PSO)
 uv run alphasched-run-baseline --algo ga --part-num 65 --dist-type h --test-num 100 --popu 200 --iter 400
 ```
 
 ### Outputs
-- `runs/<part>-<mach>-<dist>/<tool>/<run_id>/metrics.csv`: unified per-episode metrics for *all* algorithms.
-- `runs/<part>-<mach>-<dist>/<tool>/<run_id>/tb/`: TensorBoard logs (PPO training).
+- `runs/<tool>/<part>-<mach>-<dist>/<run_id>/metrics.csv`: unified per-episode metrics for *all* algorithms.
+- `runs/<tool>/<part>-<mach>-<dist>/<run_id>/tb/`: TensorBoard logs (PPO training).
+- `runs/train-ppo/<part>-<mach>-<dist>/<run_id>/model.zip`: latest resumable model snapshot for that run.
+- `runs/train-ppo/<part>-<mach>-<dist>/<run_id>/checkpoints/model-t*.zip`: optional periodic checkpoints when `--save-every > 0`.
+- `runs/train-ppo/<part>-<mach>-<dist>/latest/model.zip`: pointer used by `--load`, always targeting the most recently saved usable model.
 - Optional Excel export:
   - `uv run alphasched-export-excel --metrics runs/<...>/metrics.csv --out runs/<...>/metrics.xlsx`
 
