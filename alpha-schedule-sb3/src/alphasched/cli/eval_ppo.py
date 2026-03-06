@@ -20,7 +20,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--test-num", type=int, default=100)
     p.add_argument("--num-envs", type=int, default=8)
     p.add_argument("--device", type=str, default="auto", choices=["auto", "cpu", "cuda"])
-    p.add_argument("--runs-dir", type=str, default="runs")
+    p.add_argument(
+        "--runs-dir",
+        type=str,
+        default="runs",
+        help="Root run directory. Runs are created under <runs-dir>/<part>-<mach>-<dist>/eval-ppo/",
+    )
     p.add_argument("--run-name", type=str, default="eval-ppo")
     return p
 
@@ -67,7 +72,8 @@ def main(argv: list[str] | None = None) -> None:
     obs_cfg = ObsConfig(include_rule_features=True)
     resolved = env_cfg.resolved()
 
-    run = create_run_dir(base_dir=args.runs_dir, name=args.run_name)
+    env_key = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}"
+    run = create_run_dir(base_dir=Path(args.runs_dir) / env_key / "eval-ppo", name=args.run_name)
     from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
     from sb3_contrib import MaskablePPO
     from sb3_contrib.common.maskable.utils import get_action_masks
@@ -128,4 +134,3 @@ def main(argv: list[str] | None = None) -> None:
 
 if __name__ == "__main__":  # pragma: no cover
     main()
-

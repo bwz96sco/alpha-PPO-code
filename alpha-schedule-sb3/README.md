@@ -15,20 +15,20 @@ uv sync
 uv run alphasched-train-ppo --part-num 65 --dist-type h --num-envs 8 --total-timesteps 200000
 
 # Evaluate PPO on a deterministic test set
-uv run alphasched-eval-ppo --part-num 65 --dist-type h --test-num 100 --model-path runs/latest/model.zip
+uv run alphasched-eval-ppo --part-num 65 --dist-type h --test-num 100 --model-path runs/65-30-h/train-ppo/latest/model.zip
 
 # Run guided policy search (GPSearch) using the trained policy
-uv run alphasched-run-gpsearch --part-num 65 --dist-type h --test-num 100 --beam-size 10 --model-path runs/latest/model.zip
+uv run alphasched-run-gpsearch --part-num 65 --dist-type h --test-num 100 --beam-size 10 --model-path runs/65-30-h/train-ppo/latest/model.zip
 
 # Run baselines (rules/GA/BBO/PSO)
 uv run alphasched-run-baseline --algo ga --part-num 65 --dist-type h --test-num 100 --popu 200 --iter 400
 ```
 
 ### Outputs
-- `runs/<run_id>/metrics.csv`: unified per-episode metrics for *all* algorithms.
-- `runs/<run_id>/tb/`: TensorBoard logs (PPO training).
+- `runs/<part>-<mach>-<dist>/<tool>/<run_id>/metrics.csv`: unified per-episode metrics for *all* algorithms.
+- `runs/<part>-<mach>-<dist>/<tool>/<run_id>/tb/`: TensorBoard logs (PPO training).
 - Optional Excel export:
-  - `uv run alphasched-export-excel --metrics runs/<run_id>/metrics.csv --out runs/<run_id>/metrics.xlsx`
+  - `uv run alphasched-export-excel --metrics runs/<...>/metrics.csv --out runs/<...>/metrics.xlsx`
 
 ### Legacy parity check
 

@@ -21,6 +21,27 @@ from alphasched.rl.callbacks import (
 from alphasched.rl.models import ResNetExtractor, SimConvExtractor
 
 
+def _resolve_latest_model_path(runs_dir: Path) -> Path:
+    """Resolve the current latest run's `model.zip` to a stable path.
+
+    `create_run_dir()` updates the `<runs_dir>/latest` marker, so callers must
+    resolve this path *before* creating a new run directory.
+    """
+    candidate = runs_dir / "latest" / "model.zip"
+    if candidate.exists():
+        return candidate.resolve()
+
+    latest_txt = runs_dir / "latest.txt"
+    if latest_txt.exists():
+        run_name = latest_txt.read_text(encoding="utf-8").strip()
+        if run_name:
+            candidate = runs_dir / run_name / "model.zip"
+            if candidate.exists():
+                return candidate.resolve()
+
+    raise FileNotFoundError(f"Could not find latest model.zip under {runs_dir}")
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Train MaskablePPO on the scheduling environment (SB3).")
     p.add_argument("--part-num", type=int, default=65)
@@ -40,14 +61,14 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Training instance seed (legacy default: random). If omitted, uses a random seed.",
     )
-    p.add_argument("--models-dir", type=str, default="models")
+    p.add_argument("--models-dir", type=str, default="models", help="Directory for periodic checkpoints (--save-every).")
     p.add_argument("--save-every", type=int, default=0, help="If >0, saves a checkpoint every N timesteps.")
     p.add_argument("--load-path", type=str, default=None, help="Resume training from a saved SB3 model file.")
     p.add_argument(
         "--load",
         action="store_true",
         default=False,
-        help="Resume from models/<part>-<mach>-<dist>-weight.model in --models-dir.",
+        help="Resume from <runs-dir>/<part>-<mach>-<dist>/train-ppo/latest/model.zip.",
     )
 
     p.add_argument("--num-envs", type=int, default=8)
@@ -72,7 +93,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--device", type=str, default="auto", choices=["auto", "cpu", "cuda"])
 
     p.add_argument("--run-name", type=str, default="train-ppo")
-    p.add_argument("--runs-dir", type=str, default="runs")
+    p.add_argument(
+        "--runs-dir",
+        type=str,
+        default="runs",
+        help="Root run directory. Runs are created under <runs-dir>/<part>-<mach>-<dist>/train-ppo/",
+    )
     return p
 
 
@@ -119,19 +145,19 @@ def main(argv: list[str] | None = None) -> None:
         )
     obs_cfg = ObsConfig(include_rule_features=True)
     resolved = env_cfg.resolved()
-    model_dir = Path(args.models_dir)
+    env_key = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}"
+    env_runs_dir = Path(args.runs_dir) / env_key / "train-ppo"
     file_prefix = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}-weight"
-    final_model_path = model_dir / f"{file_prefix}.model"
     if args.load_path:
         load_path = Path(args.load_path)
     elif bool(args.load):
-        load_path = final_model_path
+        load_path = _resolve_latest_model_path(env_runs_dir)
     else:
         load_path = None
     if load_path is not None and not load_path.exists():
         raise FileNotFoundError(load_path)
 
-    run = create_run_dir(base_dir=args.runs_dir, name=args.run_name)
+    run = create_run_dir(base_dir=env_runs_dir, name=args.run_name)
     run.run_dir.mkdir(parents=True, exist_ok=True)
     (run.run_dir / "tb").mkdir(parents=True, exist_ok=True)
 
@@ -216,8 +242,6 @@ def main(argv: list[str] | None = None) -> None:
         )
         reset_num_timesteps = True
 
-    model_dir.mkdir(parents=True, exist_ok=True)
-
     with MetricsWriter(run.metrics_path) as writer:
         cb_list = [
             EpisodeCsvCallback(
@@ -227,6 +251,8 @@ def main(argv: list[str] | None = None) -> None:
             TrainingLogCallback(log_interval=1),
         ]
         if args.save_every and int(args.save_every) > 0:
+            model_dir = Path(args.models_dir)
+            model_dir.mkdir(parents=True, exist_ok=True)
             cb_list.append(
                 PeriodicModelSaveCallback(
                     PeriodicModelSaveConfig(out_dir=model_dir, file_prefix=file_prefix, every_steps=int(args.save_every))
@@ -254,10 +280,8 @@ def main(argv: list[str] | None = None) -> None:
 
     model_path = run.run_dir / "model.zip"
     model.save(str(model_path))
-    model.save(str(final_model_path))
     vec_env.close()
     print(f"Saved run model to: {model_path}")
-    print(f"Saved weight model to: {final_model_path}")
 
 
 if __name__ == "__main__":  # pragma: no cover

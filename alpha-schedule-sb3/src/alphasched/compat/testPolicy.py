@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from alphasched.config.env import EnvConfig
 from alphasched.cli.gpsearch import main as search_main
 
 
@@ -16,7 +17,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--part-num", type=int, default=65)
     p.add_argument("--mach-num", type=int, default=-1)
     p.add_argument("--dist-type", type=str, default="h", choices=["h", "m", "l"])
-    p.add_argument("--model-path", type=str, default="runs/latest/model.zip")
+    p.add_argument("--model-path", type=str, default=None, help="Default: runs/<part>-<mach>-<dist>/train-ppo/latest/model.zip")
     p.add_argument("--device", type=str, default="cpu")
     return p
 
@@ -24,19 +25,24 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     args = _build_arg_parser().parse_args(argv)
 
+    env_cfg = EnvConfig(part_num=args.part_num, dist_type=args.dist_type, mach_num=None if args.mach_num <= 0 else args.mach_num)
+    resolved = env_cfg.resolved()
+    env_key = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}"
+    default_model_path = Path("runs") / env_key / "train-ppo" / "latest" / "model.zip"
+
     mode = args.mode.lower()
     if "random" in mode:
         algo = "random_search"
         model_path = None
     elif "pure" in mode:
         algo = "rollout"
-        model_path = args.model_path
+        model_path = args.model_path or default_model_path
     elif "beam" in mode:
         algo = "beam"
-        model_path = args.model_path
+        model_path = args.model_path or default_model_path
     else:
         algo = "gpsearch"
-        model_path = args.model_path
+        model_path = args.model_path or default_model_path
 
     mapped = [
         "--algo",
@@ -62,4 +68,3 @@ def main(argv: list[str] | None = None) -> None:
 
 if __name__ == "__main__":  # pragma: no cover
     main()
-

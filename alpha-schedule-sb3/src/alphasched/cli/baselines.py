@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import time
+from pathlib import Path
 
 import numpy as np
 
@@ -64,7 +65,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--w-start", type=float, default=0.9)
     p.add_argument("--w-end", type=float, default=0.4)
 
-    p.add_argument("--runs-dir", type=str, default="runs")
+    p.add_argument(
+        "--runs-dir",
+        type=str,
+        default="runs",
+        help="Root run directory. Runs are created under <runs-dir>/<part>-<mach>-<dist>/baselines/",
+    )
     p.add_argument("--run-name", type=str, default="baseline")
     return p
 
@@ -76,7 +82,8 @@ def main(argv: list[str] | None = None) -> None:
     gen = InstanceGenerator(resolved, rng_backend="legacy_mt19937")
     shared_rng = np.random.default_rng(int(args.algo_seed)) if args.seed_mode == "independent" else None
 
-    run = create_run_dir(base_dir=args.runs_dir, name=args.run_name)
+    env_key = f"{resolved.part_num}-{resolved.mach_num}-{resolved.dist_type}"
+    run = create_run_dir(base_dir=Path(args.runs_dir) / env_key / "baselines", name=args.run_name)
     t0 = time.time()
     wt_list: list[float] = []
 
