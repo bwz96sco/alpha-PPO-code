@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +20,21 @@ class RunContext:
         return self.run_dir / "tb"
 
 
+def _write_latest_marker(base: Path, run_name: str) -> None:
+    latest = base / "latest"
+    latest_txt = base / "latest.txt"
+
+    if latest.exists() or latest.is_symlink():
+        latest.unlink()
+
+    try:
+        latest.symlink_to(run_name)
+        if latest_txt.exists():
+            latest_txt.unlink()
+    except OSError:
+        latest_txt.write_text(run_name, encoding="utf-8")
+
+
 def create_run_dir(*, base_dir: str | Path = "runs", name: str | None = None) -> RunContext:
     base = Path(base_dir)
     base.mkdir(parents=True, exist_ok=True)
@@ -29,16 +43,12 @@ def create_run_dir(*, base_dir: str | Path = "runs", name: str | None = None) ->
     run_id = f"{ts}-{suffix}" if not name else f"{ts}-{name}-{suffix}"
     run_dir = base / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
-
-    # Best-effort "latest" marker.
-    try:
-        latest = base / "latest"
-        if latest.exists() or latest.is_symlink():
-            latest.unlink()
-        latest.symlink_to(run_dir.name)
-    except OSError:
-        # Fall back to a text file on platforms that dislike symlinks.
-        (base / "latest.txt").write_text(run_dir.name, encoding="utf-8")
-
     return RunContext(run_id=run_id, run_dir=run_dir)
 
+
+def update_latest_run(*, base_dir: str | Path = "runs", run_dir: str | Path) -> None:
+    base = Path(base_dir)
+    run_path = Path(run_dir)
+    if run_path.parent.resolve() != base.resolve():
+        raise ValueError(f"run_dir must be a direct child of base_dir: {run_path} vs {base}")
+    _write_latest_marker(base, run_path.name)

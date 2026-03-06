@@ -9,7 +9,7 @@ import numpy as np
 
 from alphasched.config.env import EnvConfig, ObsConfig
 from alphasched.envs.parallel_machine_twt import EnvParams, ParallelMachineTWTEnv
-from alphasched.logging import MetricsWriter, create_run_dir
+from alphasched.logging import MetricsWriter, create_run_dir, update_latest_run
 from alphasched.rl.callbacks import (
     EpisodeCsvCallback,
     EpisodeCsvConfig,
@@ -22,11 +22,7 @@ from alphasched.rl.models import ResNetExtractor, SimConvExtractor
 
 
 def _resolve_latest_model_path(runs_dir: Path) -> Path:
-    """Resolve the current latest run's `model.zip` to a stable path.
-
-    `create_run_dir()` updates the `<runs_dir>/latest` marker, so callers must
-    resolve this path *before* creating a new run directory.
-    """
+    """Resolve the latest successfully saved run `model.zip` under `runs_dir`."""
     candidate = runs_dir / "latest" / "model.zip"
     if candidate.exists():
         return candidate.resolve()
@@ -68,7 +64,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--load",
         action="store_true",
         default=False,
-        help="Resume from <runs-dir>/<part>-<mach>-<dist>/train-ppo/latest/model.zip.",
+        help="Resume from the latest successfully saved model at <runs-dir>/<part>-<mach>-<dist>/train-ppo/latest/model.zip.",
     )
 
     p.add_argument("--num-envs", type=int, default=8)
@@ -280,6 +276,7 @@ def main(argv: list[str] | None = None) -> None:
 
     model_path = run.run_dir / "model.zip"
     model.save(str(model_path))
+    update_latest_run(base_dir=env_runs_dir, run_dir=run.run_dir)
     vec_env.close()
     print(f"Saved run model to: {model_path}")
 

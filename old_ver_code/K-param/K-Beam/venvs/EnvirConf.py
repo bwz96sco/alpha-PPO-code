@@ -8,13 +8,12 @@ distribution = {
 
 class EnviroConfig:
     def __init__(self):
-        self.partNum = 45
-        self.distType = 'l'
+        self.partNum = 50
+        self.distType = 'h'
 #------------Adjusting parameter up-------
         
-        group = (self.partNum - 5) // 10
         disParam = distribution[self.distType]
-        self.machNum = group * 5
+        self.machNum = 8
         print('Resource: ',' part, mach = ', \
               self.partNum, self.machNum)
         print('Distribution Type :', self.distType, \
